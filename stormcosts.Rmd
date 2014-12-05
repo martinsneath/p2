@@ -1,0 +1,15 @@
+---
+title: "Human and Economic Costs of Severe Weather in the U.S.A."
+author: "martin sneath"
+date: "4 December, 2014"
+output: html_document
+---
+# Synopsis (max 10 sentences)
+# Data Processing
+## Loading and preprocessing the data
+opts_current$set(cache=TRUE)
+```{r read data}
+
+a=read.csv("repdata-data-StormData.csv.bz2")
+```
+# Results (at least 1 figure, maximum 3)
