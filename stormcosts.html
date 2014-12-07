@@ -54,7 +54,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="header">
 <h1 class="title">Human and Economic Costs of Severe Weather in the U.S.A.</h1>
 <h4 class="author"><em>martin sneath</em></h4>
-<h4 class="date"><em>4 December, 2014</em></h4>
+<h4 class="date"><em>December, 2014</em></h4>
 </div>
 
 
@@ -65,12 +65,73 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <h1>Data Processing</h1>
 <div id="loading-and-preprocessing-the-data" class="section level2">
 <h2>Loading and preprocessing the data</h2>
-<p>opts_current$set(cache=TRUE)</p>
-<pre class="r"><code>a=read.csv(&quot;repdata-data-StormData.csv.bz2&quot;)</code></pre>
+<pre class="r"><code>a=read.csv(&quot;repdata-data-StormData.csv.bz2&quot;)
+# there are 985 eventypes in the data set
+# make eventtype all same case 
+a$EVTYPE=tolower(a$EVTYPE)
+# remove leading spaces
+a$EVTYPE=sub(&quot;^\\s+&quot;,&quot;&quot;,a$EVTYPE)
+# remove slashes
+a$EVTYPE=sub(&quot;/&quot;,&quot; &quot;,a$EVTYPE)
+# Aggregate processed data by summarized type
+costs=aggregate(cbind(a$FATALITIES,a$INJURIES,a$PROPDMG,a$CROPDMG),by=(list(a$EVTYPE)),FUN=sum)
+colnames(costs)=c(&quot;EVTYPE&quot;,&quot;FATALITIES&quot;,&quot;INJURIES&quot;,&quot;PROPDMG&quot;,&quot;CROPDMG&quot;)
+# remove lines with zero personal costs and &lt;= 5k
+# property and cropdamage - shows minimal effect
+costs=costs[which(costs$FATALITIES!=0 | costs$INJURIES!=0 | costs$PROPDMG &gt;5 | costs$CROPDMG &gt;5),]
+# total costs before &lt;= 5K removed
+sum(a$PROPDMG,a$CROPDMG)</code></pre>
+<pre><code>## [1] 12262327</code></pre>
+<pre class="r"><code># total costs after &lt;= 5K removed
+sum(costs$PROPDMG,costs$CROPDMG)</code></pre>
+<pre><code>## [1] 12262073</code></pre>
+<pre class="r"><code># reduce variation in event types
+costs$EVTYPE[grep(&quot;freezing rain&quot;,costs$EVTYPE)]=&quot;FREEZING RAIN&quot;
+costs$EVTYPE[grep(&quot;tstm&quot;,costs$EVTYPE)]=&quot;THUNDERSTORM&quot;
+costs$EVTYPE[grep(&quot;thunderstorm&quot;,costs$EVTYPE)]=&quot;THUNDERSTORM&quot;
+costs$EVTYPE[grep(&quot;burst&quot;,costs$EVTYPE)]=&quot;THUNDERSTORM&quot;
+costs$EVTYPE[grep(&quot;rain&quot;,costs$EVTYPE)]=&quot;RAIN&quot;
+costs$EVTYPE[grep(&quot;precip&quot;,costs$EVTYPE)]=&quot;RAIN&quot;
+costs$EVTYPE[grep(&quot;ice&quot;,costs$EVTYPE)]=&quot;ICE&quot;
+costs$EVTYPE[grep(&quot;icy&quot;,costs$EVTYPE)]=&quot;ICE&quot;
+costs$EVTYPE[grep(&quot;hail&quot;,costs$EVTYPE)]=&quot;HAIL&quot;
+costs$EVTYPE[grep(&quot;fog&quot;,costs$EVTYPE)]=&quot;FOG&quot;
+costs$EVTYPE[grep(&quot;fire&quot;,costs$EVTYPE)]=&quot;FIRE&quot;
+costs$EVTYPE[grep(&quot;flood&quot;,costs$EVTYPE)]=&quot;FLOOD&quot;
+costs$EVTYPE[grep(&quot;wind&quot;,costs$EVTYPE)]=&quot;WIND&quot;
+costs$EVTYPE[grep(&quot;slide&quot;,costs$EVTYPE)]=&quot;SLIDE&quot;
+costs$EVTYPE[grep(&quot;slump&quot;,costs$EVTYPE)]=&quot;SLIDE&quot;
+costs$EVTYPE[grep(&quot;freez&quot;,costs$EVTYPE)]=&quot;FREEZE&quot;
+costs$EVTYPE[grep(&quot;frost&quot;,costs$EVTYPE)]=&quot;FREEZE&quot;
+costs$EVTYPE[grep(&quot;snow&quot;,costs$EVTYPE)]=&quot;SNOW&quot;
+costs$EVTYPE[grep(&quot;blizzard&quot;,costs$EVTYPE)]=&quot;SNOW&quot;
+costs$EVTYPE[grep(&quot;dust&quot;,costs$EVTYPE)]=&quot;DUST&quot;
+costs$EVTYPE[grep(&quot;heat&quot;,costs$EVTYPE)]=&quot;HEAT&quot;
+costs$EVTYPE[grep(&quot;warm&quot;,costs$EVTYPE)]=&quot;HEAT&quot;
+costs$EVTYPE[grep(&quot;cold&quot;,costs$EVTYPE)]=&quot;COLD&quot;
+costs$EVTYPE[grep(&quot;hypothermia&quot;,costs$EVTYPE)]=&quot;COLD&quot;
+costs$EVTYPE[grep(&quot;tide&quot;,costs$EVTYPE)]=&quot;TIDE&quot;
+costs$EVTYPE[grep(&quot;tornado&quot;,costs$EVTYPE)]=&quot;TORNADO&quot;
+costs$EVTYPE[grep(&quot;landspout&quot;,costs$EVTYPE)]=&quot;TORNADO&quot;
+costs$EVTYPE[grep(&quot;funnel&quot;,costs$EVTYPE)]=&quot;TORNADO&quot;
+costs$EVTYPE[grep(&quot;lightning&quot;,costs$EVTYPE)]=&quot;LIGHTNING&quot;
+costs$EVTYPE[grep(&quot;hurricane&quot;,costs$EVTYPE)]=&quot;HURRICANE&quot;
+costs$EVTYPE[grep(&quot;seas&quot;,costs$EVTYPE)]=&quot;SEAS&amp;SURF&quot;
+costs$EVTYPE[grep(&quot;surf&quot;,costs$EVTYPE)]=&quot;SEAS&amp;SURF&quot;
+costs$EVTYPE[grep(&quot;waves&quot;,costs$EVTYPE)]=&quot;SEAS&amp;SURF&quot;
+costs$EVTYPE[grep(&quot;rip&quot;,costs$EVTYPE)]=&quot;SEAS&amp;SURF&quot;
+# fix known typos in data
+costs$EVTYPE[grep(&quot;avalance&quot;,costs$EVTYPE)]=&quot;avalanche&quot;</code></pre>
 </div>
 </div>
 <div id="results-at-least-1-figure-maximum-3" class="section level1">
 <h1>Results (at least 1 figure, maximum 3)</h1>
+<pre class="r"><code>sum(costs$FATALITIES);sum(costs$INJURIES)</code></pre>
+<pre><code>## [1] 15145</code></pre>
+<pre><code>## [1] 140528</code></pre>
+<pre class="r"><code>sum(costs$PROPDMG);sum(costs$CROPDMG)</code></pre>
+<pre><code>## [1] 10884269</code></pre>
+<pre><code>## [1] 1377804</code></pre>
 </div>
 
 

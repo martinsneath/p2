@@ -1,15 +1,80 @@
 ---
 title: "Human and Economic Costs of Severe Weather in the U.S.A."
 author: "martin sneath"
-date: "4 December, 2014"
+date: "December, 2014"
 output: html_document
 ---
 # Synopsis (max 10 sentences)
 # Data Processing
 ## Loading and preprocessing the data
-opts_current$set(cache=TRUE)
-```{r read data}
-
+```{r read data, cache=TRUE}
 a=read.csv("repdata-data-StormData.csv.bz2")
+# there are 985 eventypes in the data set
+# make eventtype all same case 
+a$EVTYPE=tolower(a$EVTYPE)
+# remove leading spaces
+a$EVTYPE=sub("^\\s+","",a$EVTYPE)
+# remove slashes
+a$EVTYPE=sub("/"," ",a$EVTYPE)
+# Aggregate processed data by summarized type
+costs=aggregate(cbind(a$FATALITIES,a$INJURIES,a$PROPDMG,a$CROPDMG),by=(list(a$EVTYPE)),FUN=sum)
+colnames(costs)=c("EVTYPE","FATALITIES","INJURIES","PROPDMG","CROPDMG")
+# remove lines with zero personal costs and <= 5k
+# property and cropdamage - shows minimal effect
+costs=costs[which(costs$FATALITIES!=0 | costs$INJURIES!=0 | costs$PROPDMG >5 | costs$CROPDMG >5),]
+# total costs before <= 5K removed
+sum(a$PROPDMG,a$CROPDMG)
+# total costs after <= 5K removed
+sum(costs$PROPDMG,costs$CROPDMG)
+# reduce variation in event types
+costs$EVTYPE[grep("freezing rain",costs$EVTYPE)]="FREEZING RAIN"
+costs$EVTYPE[grep("tstm",costs$EVTYPE)]="THUNDERSTORM"
+costs$EVTYPE[grep("thunderstorm",costs$EVTYPE)]="THUNDERSTORM"
+costs$EVTYPE[grep("gustnado",costs$EVTYPE)]="THUNDERSTORM"
+costs$EVTYPE[grep("burst",costs$EVTYPE)]="THUNDERSTORM"
+costs$EVTYPE[grep("rain",costs$EVTYPE)]="RAIN"
+costs$EVTYPE[grep("precip",costs$EVTYPE)]="RAIN"
+costs$EVTYPE[grep("ice",costs$EVTYPE)]="ICE"
+costs$EVTYPE[grep("icy",costs$EVTYPE)]="ICE"
+costs$EVTYPE[grep("glaze",costs$EVTYPE)]="ICE"
+costs$EVTYPE[grep("hail",costs$EVTYPE)]="HAIL"
+costs$EVTYPE[grep("fog",costs$EVTYPE)]="FOG"
+costs$EVTYPE[grep("fire",costs$EVTYPE)]="FIRE"
+costs$EVTYPE[grep("flood",costs$EVTYPE)]="FLOOD"
+costs$EVTYPE[grep("urban sml strm fld",costs$EVTYPE)]="FLOOD"
+costs$EVTYPE[grep("wind",costs$EVTYPE)]="WIND"
+costs$EVTYPE[grep("slide",costs$EVTYPE)]="SLIDE"
+costs$EVTYPE[grep("slump",costs$EVTYPE)]="SLIDE"
+costs$EVTYPE[grep("freez",costs$EVTYPE)]="FREEZE"
+costs$EVTYPE[grep("frost",costs$EVTYPE)]="FREEZE"
+costs$EVTYPE[grep("snow",costs$EVTYPE)]="SNOW"
+costs$EVTYPE[grep("blizzard",costs$EVTYPE)]="SNOW"
+costs$EVTYPE[grep("dust",costs$EVTYPE)]="DUST"
+costs$EVTYPE[grep("heat",costs$EVTYPE)]="HEAT"
+costs$EVTYPE[grep("warm",costs$EVTYPE)]="HEAT"
+costs$EVTYPE[grep("cold",costs$EVTYPE)]="COLD"
+costs$EVTYPE[grep("hypothermia",costs$EVTYPE)]="COLD"
+costs$EVTYPE[grep("tide",costs$EVTYPE)]="TIDE"
+costs$EVTYPE[grep("tornado",costs$EVTYPE)]="TORNADO"
+costs$EVTYPE[grep("landspout",costs$EVTYPE)]="TORNADO"
+
+costs$EVTYPE[grep("funnel",costs$EVTYPE)]="TORNADO"
+costs$EVTYPE[grep("lightning",costs$EVTYPE)]="LIGHTNING"
+costs$EVTYPE[grep("hurricane",costs$EVTYPE)]="HURRICANE"
+costs$EVTYPE[grep("tropical",costs$EVTYPE)]="TROPICAL STORM"
+costs$EVTYPE[grep("sea",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("swell",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("surf",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("waves",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("rip",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("erosion",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("surge",costs$EVTYPE)]="SEAS&SURF"
+costs$EVTYPE[grep("wint",costs$EVTYPE)]="WINTER"
+# fix known typos in data
+costs$EVTYPE[grep("avalance",costs$EVTYPE)]="avalanche"
+
 ```
 # Results (at least 1 figure, maximum 3)
+```{r results}
+sum(costs$FATALITIES);sum(costs$INJURIES)
+sum(costs$PROPDMG);sum(costs$CROPDMG)
