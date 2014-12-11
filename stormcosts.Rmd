@@ -5,12 +5,15 @@ date: "December, 2014"
 output: html_document
 ---
 # Synopsis (max 10 sentences)
+### Based on U.S.A. event data from 1950 to late 2011 we will analyse fatalities, injury, crop damage and property damage resulting from storm events
+### The purpose of this report is to summarize the data in such a way that someone preparing for severe weather events could have some information based on which they could attempt to prioritize their response
 # Data Processing
-## Loading and preprocessing the data
 ```{r read and preprocess data, cache=TRUE}
 # setwd("documents/wp/r/repres/p2")
 a=read.csv("repdata-data-StormData.csv.bz2",stringsAsFactors=F)
-# multiply by h/k/m/b 
+# There is a cost factor in the data which is a multiplier of the $ field by hundreds, thousands, millions and billions
+# there are a minimal number of other factors which are not documented that are assumed to be typos and therefore do not change the dollar value
+# multiply by h/k/m/b cost factors
 dmgmult=function(arg){
      DMG=as.numeric(arg[1]);mult=arg[2]
      x=1
@@ -20,13 +23,16 @@ dmgmult=function(arg){
       else if (mult =="m") {x=1000000}
       else if (mult =="M") {x=1000000}
 else if (mult =="B") {x=1000000000}
-     DMG=DMG*x
+     DMG=DMG*x/1000
+# multiply dmg by factor, then divide by 1000 to make data presentation easier
      return (DMG)
 }
+# following applies above function to crop and property damage
 a$PDMG=apply(a[c("PROPDMG", "PROPDMGEXP")], 1, FUN=dmgmult)
 a$CDMG=apply(a[c("CROPDMG", "CROPDMGEXP")], 1, FUN=dmgmult)
+# following makes the date field accessible to date arithmetic
 a$YEAR=as.Date(as.character(a$BGN_DATE),"%m/%d/%Y %H:%M:%S")
-# there are 985 eventypes in the data set
+# there are 985 eventypes in the data set many of which are extremely similar. The following code tries to summarize similar events to make the analysis more comprehensive.
 # make eventtype all same case 
 a$EVTYPE=tolower(a$EVTYPE)
 # remove leading spaces
@@ -68,7 +74,6 @@ a$EVTYPE[grep("low temperature",a$EVTYPE)]="COLD"
 a$EVTYPE[grep("tide",a$EVTYPE)]="TIDE"
 a$EVTYPE[grep("tornado",a$EVTYPE)]="TORNADO"
 a$EVTYPE[grep("landspout",a$EVTYPE)]="TORNADO"
-
 a$EVTYPE[grep("funnel",a$EVTYPE)]="TORNADO"
 a$EVTYPE[grep("lightning",a$EVTYPE)]="LIGHTNING"
 a$EVTYPE[grep("hurricane",a$EVTYPE)]="HURRICANE"
@@ -94,35 +99,40 @@ a$EVTYPE[grep("hyperthermia",a$EVTYPE)]="COLD"
 # Aggregate processed data by summarized type
 costs=aggregate(cbind(a$FATALITIES,a$INJURIES,a$PDMG,a$CDMG),by=(list(a$EVTYPE)),FUN=sum)
 colnames(costs)=c("EVTYPE","FATALITIES","INJURIES","PDMG","CDMG")
-# remove lines with zero personal costs and <= 5k
-# property and cropdamage - shows minimal effect
-costs=costs[which(costs$FATALITIES!=0 | costs$INJURIES!=0 | costs$PDMG >5 | costs$CDMG >5),]
-# total costs before <= 5K removed
-sum(a$PDMG,a$CDMG)
-# total costs after <= 5K removed
-sum(costs$PDMG,costs$CDMG)
 ```
-# Results (at least 1 figure, maximum 3)
+# Results - Tornadoes are number 1 source of fatalities and injuries
+## The data seems to be overreported for damage and events in the late naughties while fatality and Injury figures seem to be reported more   consistently.
+### Flood is the major cause of property damage, while drought is the number 1 cause of crop damage, but followed very closely by the opposite condition of drought
+
 ```{r results}
-library(dplyr)
-# The number of reports and the $ value are much different by year, but fatalities and injuries seem to be reported more consistently 
+# analyze data by year
 c=substr(a$YEAR,1,4)
 par(mfrow=c(2,2))
 hist(as.numeric(c),main="Analyis by Year",xlab="",ylab="Number of Events")
 plot(c,(a$PDMG),type="h",ylab="$ Damage")
 plot(c,a$FATALITIES,type="h",ylab="Fatalities")
 plot(c,a$INJURIES,type="h",ylab="Injuries")
-sum(costs$FATALITIES);sum(costs$INJURIES)
+# analyze top 10 events in each category of loss/damage - uses dplyr arrange
+library(dplyr,quietly)
 par (las=2,mfrow=c(1,2))
 f=arrange(costs,desc(FATALITIES))
 i=arrange(costs,desc(INJURIES))
 p=arrange(costs,desc(PDMG))
 c=arrange(costs,desc(CDMG))
 f=f[1:10,];i=i[1:10,];p=p[1:10,];c=c[1:10,]   
-barplot(f$FATALITIES,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
-barplot(i$INJURIES,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
+barplot(f$FATALITIES,horiz=T,names.arg=f$EVTYPE,cex.names=.5,main="Fatalities")
+barplot(i$INJURIES,horiz=T,names.arg=i$EVTYPE,cex.names=.5,main="Injuries")
+# Total Fatalities Reported 1950 - 2011
+sum(costs$FATALITIES)
+# Total Injuries Reported 1950 - 2011
+sum(costs$INJURIES)
 par (las=2,mfrow=c(1,2))
-barplot(p$PDMG,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
-barplot(c$CDMG,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
-
+# following stops $ being reported in scientific notation
+options(scipen=999)
+barplot(p$PDMG,horiz=T,names.arg=p$EVTYPE,cex.names=.5,main="Prop Damage K $")
+barplot(c$CDMG,horiz=T,names.arg=c$EVTYPE,cex.names=.5,main="Crop Damage K $")
+# total costs property & crop damage 1,000s of $
+sum(a$PDMG,a$CDMG)
+# crop damage as a % of property damage
+sum(a$CDMG)/sum(a$PDMG)*100
 ```
