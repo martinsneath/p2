@@ -7,8 +7,25 @@ output: html_document
 # Synopsis (max 10 sentences)
 # Data Processing
 ## Loading and preprocessing the data
-```{r read data, cache=TRUE}
-a=read.csv("repdata-data-StormData.csv.bz2")
+```{r read and preprocess data, cache=TRUE}
+# setwd("documents/wp/r/repres/p2")
+a=read.csv("repdata-data-StormData.csv.bz2",stringsAsFactors=F)
+# multiply by h/k/m/b 
+dmgmult=function(arg){
+     DMG=as.numeric(arg[1]);mult=arg[2]
+     x=1
+     if (mult =="h") {x=100}
+     else if (mult =="k") {x=1000}
+      else if (mult =="K") {x=1000}
+      else if (mult =="m") {x=1000000}
+      else if (mult =="M") {x=1000000}
+else if (mult =="B") {x=1000000000}
+     DMG=DMG*x
+     return (DMG)
+}
+a$PDMG=apply(a[c("PROPDMG", "PROPDMGEXP")], 1, FUN=dmgmult)
+a$CDMG=apply(a[c("CROPDMG", "CROPDMGEXP")], 1, FUN=dmgmult)
+a$YEAR=as.Date(as.character(a$BGN_DATE),"%m/%d/%Y %H:%M:%S")
 # there are 985 eventypes in the data set
 # make eventtype all same case 
 a$EVTYPE=tolower(a$EVTYPE)
@@ -16,65 +33,96 @@ a$EVTYPE=tolower(a$EVTYPE)
 a$EVTYPE=sub("^\\s+","",a$EVTYPE)
 # remove slashes
 a$EVTYPE=sub("/"," ",a$EVTYPE)
+# reduce variation in event types
+a$EVTYPE[grep("freezing rain",a$EVTYPE)]="FREEZING RAIN"
+a$EVTYPE[grep("tstm",a$EVTYPE)]="THUNDERSTORM"
+a$EVTYPE[grep("thunderstorm",a$EVTYPE)]="THUNDERSTORM"
+a$EVTYPE[grep("gustnado",a$EVTYPE)]="THUNDERSTORM"
+a$EVTYPE[grep("burst",a$EVTYPE)]="THUNDERSTORM"
+a$EVTYPE[grep("rain",a$EVTYPE)]="RAIN"
+a$EVTYPE[grep("precip",a$EVTYPE)]="RAIN"
+a$EVTYPE[grep("ice",a$EVTYPE)]="ICE"
+a$EVTYPE[grep("icy",a$EVTYPE)]="ICE"
+a$EVTYPE[grep("glaze",a$EVTYPE)]="ICE"
+a$EVTYPE[grep("hail",a$EVTYPE)]="HAIL"
+a$EVTYPE[grep("fog",a$EVTYPE)]="FOG"
+a$EVTYPE[grep("fire",a$EVTYPE)]="FIRE"
+a$EVTYPE[grep("flood",a$EVTYPE)]="FLOOD"
+a$EVTYPE[grep("urban sml stream fld",a$EVTYPE)]="FLOOD"
+a$EVTYPE[grep("rapidly rising water",a$EVTYPE)]="FLOOD"
+a$EVTYPE[grep("wind",a$EVTYPE)]="WIND"
+a$EVTYPE[grep("slide",a$EVTYPE)]="SLIDE"
+a$EVTYPE[grep("slump",a$EVTYPE)]="SLIDE"
+a$EVTYPE[grep("freez",a$EVTYPE)]="FREEZE"
+a$EVTYPE[grep("frost",a$EVTYPE)]="FREEZE"
+a$EVTYPE[grep("snow",a$EVTYPE)]="SNOW"
+a$EVTYPE[grep("blizzard",a$EVTYPE)]="SNOW"
+a$EVTYPE[grep("heavy mix",a$EVTYPE)]="SNOW"
+a$EVTYPE[grep("sleet",a$EVTYPE)]="SNOW"
+a$EVTYPE[grep("dust",a$EVTYPE)]="DUST"
+a$EVTYPE[grep("heat",a$EVTYPE)]="HEAT"
+a$EVTYPE[grep("warm",a$EVTYPE)]="HEAT"
+a$EVTYPE[grep("cold",a$EVTYPE)]="COLD"
+a$EVTYPE[grep("hypothermia",a$EVTYPE)]="COLD"
+a$EVTYPE[grep("low temperature",a$EVTYPE)]="COLD"
+a$EVTYPE[grep("tide",a$EVTYPE)]="TIDE"
+a$EVTYPE[grep("tornado",a$EVTYPE)]="TORNADO"
+a$EVTYPE[grep("landspout",a$EVTYPE)]="TORNADO"
+
+a$EVTYPE[grep("funnel",a$EVTYPE)]="TORNADO"
+a$EVTYPE[grep("lightning",a$EVTYPE)]="LIGHTNING"
+a$EVTYPE[grep("hurricane",a$EVTYPE)]="HURRICANE"
+a$EVTYPE[grep("tropical",a$EVTYPE)]="TROPICAL STORM"
+a$EVTYPE[grep("sea",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("swell",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("surf",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("waves",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("rip",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("erosion",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("surge",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("high",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("marine",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("rogue wave",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("coastal",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("drowning",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("seiche",a$EVTYPE)]="SEAS&SURF"
+a$EVTYPE[grep("wint",a$EVTYPE)]="WINTER"
+# fix known typos in data
+a$EVTYPE[grep("avalance",a$EVTYPE)]="avalanche"
+a$EVTYPE[grep("water spout-",a$EVTYPE)]="water spout"
+a$EVTYPE[grep("hyperthermia",a$EVTYPE)]="COLD"
 # Aggregate processed data by summarized type
-costs=aggregate(cbind(a$FATALITIES,a$INJURIES,a$PROPDMG,a$CROPDMG),by=(list(a$EVTYPE)),FUN=sum)
-colnames(costs)=c("EVTYPE","FATALITIES","INJURIES","PROPDMG","CROPDMG")
+costs=aggregate(cbind(a$FATALITIES,a$INJURIES,a$PDMG,a$CDMG),by=(list(a$EVTYPE)),FUN=sum)
+colnames(costs)=c("EVTYPE","FATALITIES","INJURIES","PDMG","CDMG")
 # remove lines with zero personal costs and <= 5k
 # property and cropdamage - shows minimal effect
-costs=costs[which(costs$FATALITIES!=0 | costs$INJURIES!=0 | costs$PROPDMG >5 | costs$CROPDMG >5),]
+costs=costs[which(costs$FATALITIES!=0 | costs$INJURIES!=0 | costs$PDMG >5 | costs$CDMG >5),]
 # total costs before <= 5K removed
-sum(a$PROPDMG,a$CROPDMG)
+sum(a$PDMG,a$CDMG)
 # total costs after <= 5K removed
-sum(costs$PROPDMG,costs$CROPDMG)
-# reduce variation in event types
-costs$EVTYPE[grep("freezing rain",costs$EVTYPE)]="FREEZING RAIN"
-costs$EVTYPE[grep("tstm",costs$EVTYPE)]="THUNDERSTORM"
-costs$EVTYPE[grep("thunderstorm",costs$EVTYPE)]="THUNDERSTORM"
-costs$EVTYPE[grep("gustnado",costs$EVTYPE)]="THUNDERSTORM"
-costs$EVTYPE[grep("burst",costs$EVTYPE)]="THUNDERSTORM"
-costs$EVTYPE[grep("rain",costs$EVTYPE)]="RAIN"
-costs$EVTYPE[grep("precip",costs$EVTYPE)]="RAIN"
-costs$EVTYPE[grep("ice",costs$EVTYPE)]="ICE"
-costs$EVTYPE[grep("icy",costs$EVTYPE)]="ICE"
-costs$EVTYPE[grep("glaze",costs$EVTYPE)]="ICE"
-costs$EVTYPE[grep("hail",costs$EVTYPE)]="HAIL"
-costs$EVTYPE[grep("fog",costs$EVTYPE)]="FOG"
-costs$EVTYPE[grep("fire",costs$EVTYPE)]="FIRE"
-costs$EVTYPE[grep("flood",costs$EVTYPE)]="FLOOD"
-costs$EVTYPE[grep("urban sml strm fld",costs$EVTYPE)]="FLOOD"
-costs$EVTYPE[grep("wind",costs$EVTYPE)]="WIND"
-costs$EVTYPE[grep("slide",costs$EVTYPE)]="SLIDE"
-costs$EVTYPE[grep("slump",costs$EVTYPE)]="SLIDE"
-costs$EVTYPE[grep("freez",costs$EVTYPE)]="FREEZE"
-costs$EVTYPE[grep("frost",costs$EVTYPE)]="FREEZE"
-costs$EVTYPE[grep("snow",costs$EVTYPE)]="SNOW"
-costs$EVTYPE[grep("blizzard",costs$EVTYPE)]="SNOW"
-costs$EVTYPE[grep("dust",costs$EVTYPE)]="DUST"
-costs$EVTYPE[grep("heat",costs$EVTYPE)]="HEAT"
-costs$EVTYPE[grep("warm",costs$EVTYPE)]="HEAT"
-costs$EVTYPE[grep("cold",costs$EVTYPE)]="COLD"
-costs$EVTYPE[grep("hypothermia",costs$EVTYPE)]="COLD"
-costs$EVTYPE[grep("tide",costs$EVTYPE)]="TIDE"
-costs$EVTYPE[grep("tornado",costs$EVTYPE)]="TORNADO"
-costs$EVTYPE[grep("landspout",costs$EVTYPE)]="TORNADO"
-
-costs$EVTYPE[grep("funnel",costs$EVTYPE)]="TORNADO"
-costs$EVTYPE[grep("lightning",costs$EVTYPE)]="LIGHTNING"
-costs$EVTYPE[grep("hurricane",costs$EVTYPE)]="HURRICANE"
-costs$EVTYPE[grep("tropical",costs$EVTYPE)]="TROPICAL STORM"
-costs$EVTYPE[grep("sea",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("swell",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("surf",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("waves",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("rip",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("erosion",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("surge",costs$EVTYPE)]="SEAS&SURF"
-costs$EVTYPE[grep("wint",costs$EVTYPE)]="WINTER"
-# fix known typos in data
-costs$EVTYPE[grep("avalance",costs$EVTYPE)]="avalanche"
-
+sum(costs$PDMG,costs$CDMG)
 ```
 # Results (at least 1 figure, maximum 3)
 ```{r results}
+library(dplyr)
+# The number of reports and the $ value are much different by year, but fatalities and injuries seem to be reported more consistently 
+c=substr(a$YEAR,1,4)
+par(mfrow=c(2,2))
+hist(as.numeric(c),main="Analyis by Year",xlab="",ylab="Number of Events")
+plot(c,(a$PDMG),type="h",ylab="$ Damage")
+plot(c,a$FATALITIES,type="h",ylab="Fatalities")
+plot(c,a$INJURIES,type="h",ylab="Injuries")
 sum(costs$FATALITIES);sum(costs$INJURIES)
-sum(costs$PROPDMG);sum(costs$CROPDMG)
+par (las=2,mfrow=c(1,2))
+f=arrange(costs,desc(FATALITIES))
+i=arrange(costs,desc(INJURIES))
+p=arrange(costs,desc(PDMG))
+c=arrange(costs,desc(CDMG))
+f=f[1:10,];i=i[1:10,];p=p[1:10,];c=c[1:10,]   
+barplot(f$FATALITIES,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
+barplot(i$INJURIES,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
+par (las=2,mfrow=c(1,2))
+barplot(p$PDMG,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
+barplot(c$CDMG,horiz=T,names.arg=f$EVTYPE,cex.names=.5)
+
+```
